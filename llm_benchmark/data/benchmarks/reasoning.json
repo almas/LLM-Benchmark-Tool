@@ -1,0 +1,62 @@
+[
+    {
+        "id": "reason_1",
+        "prompt": "If all Bloops are Razzies and all Razzies are Lazzies, are all Bloops Lazzies?",
+        "expected_answer": "Yes",
+        "system_prompt": "Answer with just 'Yes' or 'No' followed by a brief explanation."
+    },
+    {
+        "id": "reason_2",
+        "prompt": "A farmer has 17 sheep. All but 9 run away. How many sheep does the farmer have left?",
+        "expected_answer": "9",
+        "system_prompt": "Answer with just the number followed by a brief explanation."
+    },
+    {
+        "id": "reason_3",
+        "prompt": "If you rearrange the letters 'COMPNOTER', you get the name of a:",
+        "expected_answer": "Computer",
+        "system_prompt": "Answer with a brief explanation."
+    },
+    {
+        "id": "reason_4",
+        "prompt": "A clock shows 3:15. What is the angle between the hour and minute hands?",
+        "expected_answer": "7.5 degrees",
+        "system_prompt": "Show your calculation."
+    },
+    {
+        "id": "reason_5",
+        "prompt": "If 5 machines take 5 minutes to make 5 widgets, how long would it take 100 machines to make 100 widgets?",
+        "expected_answer": "5 minutes",
+        "system_prompt": "Answer with a brief explanation."
+    },
+    {
+        "id": "reason_6",
+        "prompt": "What comes next in the sequence: 2, 6, 12, 20, 30, ?",
+        "expected_answer": "42",
+        "system_prompt": "Answer with just the number followed by explanation."
+    },
+    {
+        "id": "reason_7",
+        "prompt": "Mary's father has five daughters: Nana, Nene, Nini, Nono. What is the name of the fifth daughter?",
+        "expected_answer": "Mary",
+        "system_prompt": "Answer with just the name."
+    },
+    {
+        "id": "reason_8",
+        "prompt": "You are running a race and pass the person in second place. What place are you in now?",
+        "expected_answer": "Second",
+        "system_prompt": "Answer with a brief explanation."
+    },
+    {
+        "id": "reason_9",
+        "prompt": "How many times can you subtract 10 from 100?",
+        "expected_answer": "Once",
+        "system_prompt": "Answer with a brief explanation."
+    },
+    {
+        "id": "reason_10",
+        "prompt": "A bat and a ball cost $1.10 in total. The bat costs $1.00 more than the ball. How much does the ball cost?",
+        "expected_answer": "0.05 or 5 cents or $0.05",
+        "system_prompt": "Show your calculation."
+    }
+]

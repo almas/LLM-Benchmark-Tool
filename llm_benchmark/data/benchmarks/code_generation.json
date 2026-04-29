@@ -1,0 +1,52 @@
+[
+    {
+        "id": "code_1",
+        "prompt": "Write a Python function to check if a string is a palindrome.",
+        "system_prompt": "Write clean, well-commented Python code. Return only the code."
+    },
+    {
+        "id": "code_2",
+        "prompt": "Implement a binary search algorithm in Python.",
+        "system_prompt": "Write clean, well-commented Python code. Return only the code."
+    },
+    {
+        "id": "code_3",
+        "prompt": "Create a function that merges two sorted lists into one sorted list.",
+        "system_prompt": "Write clean, well-commented Python code. Return only the code."
+    },
+    {
+        "id": "code_4",
+        "prompt": "Write a Python decorator that measures function execution time.",
+        "system_prompt": "Write clean, well-commented Python code. Return only the code."
+    },
+    {
+        "id": "code_5",
+        "prompt": "Implement a simple Stack class in Python with push, pop, and peek methods.",
+        "system_prompt": "Write clean, well-commented Python code. Include type hints. Return only the code."
+    },
+    {
+        "id": "code_6",
+        "prompt": "Write a Python function to flatten a nested list.",
+        "system_prompt": "Write clean, well-commented Python code using recursion. Return only the code."
+    },
+    {
+        "id": "code_7",
+        "prompt": "Create a Python function to calculate the factorial of a number using memoization.",
+        "system_prompt": "Write clean, well-commented Python code. Return only the code."
+    },
+    {
+        "id": "code_8",
+        "prompt": "Implement a simple HTTP server in Python without external libraries.",
+        "system_prompt": "Write clean, well-commented Python code using only standard libraries. Return only the code."
+    },
+    {
+        "id": "code_9",
+        "prompt": "Write a Python function to find the common elements between two lists.",
+        "system_prompt": "Write clean, well-commented Python code. Return only the code."
+    },
+    {
+        "id": "code_10",
+        "prompt": "Implement a LRU Cache in Python using dictionaries and doubly linked list concept.",
+        "system_prompt": "Write clean, well-commented Python code. Return only the code."
+    }
+]

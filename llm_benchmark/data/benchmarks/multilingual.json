@@ -1,0 +1,12 @@
+[
+    {"prompt": "Introduce yourself in Japanese.", "language": "Japanese"},
+    {"prompt": "Introduce yourself in French.", "language": "French"},
+    {"prompt": "Introduce yourself in German.", "language": "German"},
+    {"prompt": "Introduce yourself in Spanish.", "language": "Spanish"},
+    {"prompt": "Introduce yourself in Chinese (Simplified).", "language": "Chinese"},
+    {"prompt": "Introduce yourself in Korean.", "language": "Korean"},
+    {"prompt": "Introduce yourself in Arabic.", "language": "Arabic"},
+    {"prompt": "Introduce yourself in Portuguese.", "language": "Portuguese"},
+    {"prompt": "Introduce yourself in Russian.", "language": "Russian"},
+    {"prompt": "Introduce yourself in Hindi.", "language": "Hindi"}
+]

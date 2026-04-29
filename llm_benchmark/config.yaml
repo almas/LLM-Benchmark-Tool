@@ -1,0 +1,17 @@
+provider:
+  name: local
+  api_key: test-api-key
+  base_url: http://127.0.0.1:8000/v1
+  model: Qwen3.6-35B-A3B-Q8_0
+  timeout: 120
+
+benchmarks:
+  performance:
+    max_tokens: 500
+    num_trials: 10
+  accuracy:
+    num_questions: 20
+  code_generation:
+    num_tasks: 10
+  reasoning:
+    num_tasks: 10

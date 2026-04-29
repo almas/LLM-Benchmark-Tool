@@ -1,0 +1,102 @@
+[
+    {
+        "id": "qa_1",
+        "prompt": "What is the capital of France?",
+        "expected_answer": "Paris"
+    },
+    {
+        "id": "qa_2",
+        "prompt": "What is 2 + 2?",
+        "expected_answer": "4"
+    },
+    {
+        "id": "qa_3",
+        "prompt": "Who wrote 'Romeo and Juliet'?",
+        "expected_answer": "William Shakespeare"
+    },
+    {
+        "id": "qa_4",
+        "prompt": "What planet is known as the Red Planet?",
+        "expected_answer": "Mars"
+    },
+    {
+        "id": "qa_5",
+        "prompt": "What is the chemical symbol for water?",
+        "expected_answer": "H2O"
+    },
+    {
+        "id": "qa_6",
+        "prompt": "In what year did World War II end?",
+        "expected_answer": "1945"
+    },
+    {
+        "id": "qa_7",
+        "prompt": "What is the largest ocean on Earth?",
+        "expected_answer": "Pacific"
+    },
+    {
+        "id": "qa_8",
+        "prompt": "What is the speed of light in m/s (approximate order of magnitude)?",
+        "expected_answer": "3 x 10^8 or 300000000"
+    },
+    {
+        "id": "qa_9",
+        "prompt": "Which element has the atomic number 1?",
+        "expected_answer": "Hydrogen"
+    },
+    {
+        "id": "qa_10",
+        "prompt": "What is the square root of 144?",
+        "expected_answer": "12"
+    },
+    {
+        "id": "qa_11",
+        "prompt": "What language is spoken in Brazil?",
+        "expected_answer": "Portuguese"
+    },
+    {
+        "id": "qa_12",
+        "prompt": "How many continents are there?",
+        "expected_answer": "7"
+    },
+    {
+        "id": "qa_13",
+        "prompt": "What is the boiling point of water in Celsius?",
+        "expected_answer": "100"
+    },
+    {
+        "id": "qa_14",
+        "prompt": "Who painted the Mona Lisa?",
+        "expected_answer": "Leonardo da Vinci"
+    },
+    {
+        "id": "qa_15",
+        "prompt": "What is the longest river in the world?",
+        "expected_answer": "Nile"
+    },
+    {
+        "id": "qa_16",
+        "prompt": "What is the smallest prime number?",
+        "expected_answer": "2"
+    },
+    {
+        "id": "qa_17",
+        "prompt": "What gas do plants absorb from the atmosphere?",
+        "expected_answer": "Carbon dioxide"
+    },
+    {
+        "id": "qa_18",
+        "prompt": "What is the currency of Japan?",
+        "expected_answer": "Yen"
+    },
+    {
+        "id": "qa_19",
+        "prompt": "How many sides does a hexagon have?",
+        "expected_answer": "6"
+    },
+    {
+        "id": "qa_20",
+        "prompt": "What is the hardest natural substance on Earth?",
+        "expected_answer": "Diamond"
+    }
+]
