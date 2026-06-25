@@ -2,8 +2,10 @@
 
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Optional
+import logging
 
 from llm_benchmark.models import Message, BenchmarkTrial, BenchmarkTask, ProviderType
+from llm_benchmark.logger import logger
 
 
 class BaseProvider(ABC):
@@ -304,11 +306,33 @@ class AzureProvider(BaseProvider):
 class LocalProvider(BaseProvider):
     """Local provider for OpenAI-compatible APIs (e.g., Ollama, vLLM)."""
 
-    def __init__(self, base_url: str, model: str = "local-model", api_key: str = "sk-not-used", **kwargs):
+    def __init__(self, base_url: str, model: Optional[str] = None, api_key: str = "sk-not-used", **kwargs):
         self.base_url = base_url
         self.model = model
         self.api_key = api_key
         self._client = None
+        self._default_model = None
+        self._models_fetched = False
+
+    async def _ensure_model(self):
+        """Fetch default model from API if not specified."""
+        if self.model is not None or self._models_fetched:
+            return
+        
+        try:
+            from openai import AsyncOpenAI
+            client = AsyncOpenAI(api_key=self.api_key, base_url=self.base_url)
+            models = await client.models.list()
+            if models.data:
+                self.model = models.data[0].id
+                logger.info(f"Using default model: {self.model}")
+            else:
+                self.model = "default"
+        except Exception as e:
+            logger.warning(f"Could not fetch models from API: {e}. Using 'default' as placeholder.")
+            self.model = "default"
+        finally:
+            self._models_fetched = True
 
     async def chat_completion(
         self,
@@ -322,6 +346,9 @@ class LocalProvider(BaseProvider):
 
         if self._client is None:
             self._client = AsyncOpenAI(api_key=self.api_key, base_url=self.base_url)
+
+        # Fetch default model if not specified
+        await self._ensure_model()
 
         start_time = time.time()
         msg_dicts = [{"role": m.role, "content": m.content} for m in messages]
@@ -370,7 +397,7 @@ class LocalProvider(BaseProvider):
     def get_provider_info(self) -> Dict[str, Any]:
         return {
             "type": ProviderType.LOCAL.value,
-            "model": self.model,
+            "model": self.model or "default-loaded-model",
             "base_url": self.base_url,
         }
 

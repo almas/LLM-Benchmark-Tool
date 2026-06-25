@@ -53,8 +53,8 @@ Examples:
     )
     provider_group.add_argument(
         "--model", "-m",
-        default="dummy-model",
-        help="Model name to benchmark (default: dummy-model)",
+        default=None,
+        help="Model name to benchmark (required for local provider if not using default model)",
     )
     provider_group.add_argument(
         "--api-key",
@@ -212,7 +212,8 @@ async def run_benchmark(args) -> int:
         return 1
 
     logger.info(f"LLM Benchmark Tool v1.0.0")
-    logger.info(f"Provider: {args.provider} | Model: {args.model}")
+    model_str = args.model if args.model else "default-loaded-model"
+    logger.info(f"Provider: {args.provider} | Model: {model_str}")
     logger.info(f"Benchmarks: {', '.join(bt.value for bt in benchmark_types)}")
     print("=" * 50)
 
