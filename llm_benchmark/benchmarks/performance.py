@@ -25,7 +25,13 @@ class PerformanceBenchmark:
                     id=f"perf_{i}",
                     benchmark_type=BenchmarkType.PERFORMANCE,
                     prompt=prompt,
-                    system_prompt="Provide a detailed and comprehensive answer. Write at least 200 words.",
+                    system_prompt=(
+                        "You are an expert software engineer. Produce a complete developer-grade answer "
+                        "that includes architecture rationale, code examples, implementation details, "
+                        "and test strategy. The response should be long-form, target at least 1200 tokens, "
+                        "and should feel like a real code development task solution."
+                    ),
+                    metadata={"max_tokens": 2048},
                 )
             )
         return tasks

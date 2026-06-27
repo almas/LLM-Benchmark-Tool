@@ -1,12 +1,12 @@
 [
-    "Explain the concept of recursion in programming with an example.",
-    "What are the main differences between TCP and UDP?",
-    "Describe the process of machine learning model training.",
-    "What is the time complexity of binary search?",
-    "Explain how HTTPS ensures secure communication.",
-    "What are design patterns in software engineering?",
-    "Describe the architecture of a microservices system.",
-    "What is the CAP theorem in distributed systems?",
-    "Explain the concept of dependency injection.",
-    "What are the advantages of using containers?"
+    "Design and implement a Python class that manages a thread-safe in-memory cache with TTL eviction, optional persistence to disk, and a simple metrics API. Include usage examples and error handling.",
+    "Write a complete Flask REST API endpoint for managing project tasks, including create/read/update/delete operations, request validation, JSON response formatting, and error handling. Include example request payloads.",
+    "Implement a secure file upload utility using boto3 for AWS S3. Include multipart upload support, retries with backoff, destination namespacing, and sample code for verifying upload success.",
+    "Create a robust configuration loader that reads JSON and YAML files, supports environment variable overrides, validates required fields and types, and produces clear error messages when validation fails.",
+    "Refactor a monolithic data-processing pipeline into modular functions and classes in Python. Provide code snippets showing dependency injection, splitting responsibilities, and unit test structure.",
+    "Write a parser for a simple programming language that tokenizes, parses, and validates expressions. Include code for the tokenizer, parser, and a sample input with output AST structure.",
+    "Implement a priority queue using a binary heap in Python. Include methods for insert, pop, peek, heapify, and demonstrate usage with example test cases.",
+    "Build a SQL query builder class with support for SELECT, JOIN, WHERE, GROUP BY, and parameter binding to prevent SQL injection. Provide example queries and the generated SQL output.",
+    "Write an async Python service that consumes messages from a queue, processes each message, stores results in a database, and retries transient failures with exponential backoff. Include logging and graceful shutdown handling.",
+    "Create a command-line utility that scans a Git repository for TODO comments, counts modified files, and prints a developer-friendly summary report. Include code for repository traversal and output formatting."
 ]

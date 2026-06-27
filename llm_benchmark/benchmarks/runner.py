@@ -33,7 +33,9 @@ class BenchmarkRunner:
             tasks = generate_benchmark_tasks(b_type, self.config.num_trials)
             
             # Execute trials concurrently with a limit on concurrency to avoid rate limits
+            start_time = time.time()
             trials = await self.run_benchmark(tasks)
+            end_time = time.time()
             
             # Create a BenchmarkResult object for this specific benchmark
             result = BenchmarkResult(
@@ -41,8 +43,8 @@ class BenchmarkRunner:
                 provider=self.provider.get_provider_info().get("type"), # This is likely a string, but should be ProviderType
                 benchmark_type=b_type,
                 trials=trials,
-                start_time=time.time(),
-                end_time=time.time(),
+                start_time=start_time,
+                end_time=end_time,
                 config=self.config.__dict__
             )
             
@@ -94,8 +96,12 @@ class BenchmarkRunner:
                 if self.config.verbose:
                     logger.debug(f"Running task {task.id} (Attempt {attempt + 1})")
                 
+                # Merge any task-specific metadata into the benchmark config for this trial.
+                trial_config = self.config.__dict__.copy()
+                trial_config.update(task.metadata or {})
+
                 # The provider handles the actual API call
-                result = await self.provider.run_benchmark(task, self.config.__dict__)
+                result = await self.provider.run_benchmark(task, trial_config)
                 
                 if result.error:
                     raise Exception(result.error)
