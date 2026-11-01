@@ -1,17 +1,78 @@
+# -----------------------------------------------------------------------------
+# LLM Benchmark Tool - configuration template
+#
+# Copy this file to one of the discovered locations and edit it:
+#   ./config.yaml, ./config.yml, llm_benchmark/config.yaml,
+#   ~/.config/llm-benchmark/config.yaml, or pass --config /path/to/config.yaml
+#
+# ${VAR} and ${VAR:default} inside string values are expanded from the
+# environment, so secrets can stay out of the file.
+#
+# Precedence: CLI flags > environment variables > this file > built-in defaults.
+# The effective settings (API key redacted) are printed before the first request.
+# -----------------------------------------------------------------------------
+
 provider:
+  # openai | azure | local | dummy
   name: local
-  api_key: test-api-key
+  # Model / engine id. Set to null to use whatever the server reports.
+  model: Qwen/Qwen2.5-7B-Instruct
   base_url: http://127.0.0.1:8000/v1
-  model: model-name
+  # Prefer an environment reference over a literal key:
+  api_key: ${OPENAI_API_KEY}
+  # Azure only:
+  #   azure_endpoint: ${AZURE_OPENAI_ENDPOINT}
+  #   api_version: "2024-02-15-preview"
+  # Per-request timeout in seconds.
   timeout: 120
 
+# -----------------------------------------------------------------------------
+# How performance is measured - these settings decide what the numbers mean.
+# -----------------------------------------------------------------------------
+measurement:
+  # 1 = single-stream decode speed (what vLLM/SGLang dashboards report).
+  # Raise it only when you specifically want aggregate throughput.
+  concurrency: 1
+  # Requests sent before timing starts (JIT, page cache, CUDA graph capture).
+  warmup_requests: 1
+  # Streaming separates TTFT/prefill from decode. Turning it off makes
+  # tokens/s include prefill and queueing.
+  stream: true
+  # Ask the engine for exact token counts on the final stream chunk.
+  include_usage: true
+  # auto | usage | estimate
+  token_source: auto
+  # Fixed sampling seed for reproducible generation; set null to omit it.
+  seed: 1234
+  # Runner-level retries for failed requests (SDK retries are always disabled).
+  retries: 2
+  # Seconds between trials - useful on thermally limited hardware.
+  cooldown: 0.0
+  # short | medium | heavy. "heavy" matches engine benchmarks (long output).
+  prompt_profile: heavy
+  # Force exactly max_tokens output tokens (vLLM/SGLang) so trials are comparable.
+  ignore_eos: false
+  # Extra request body fields, e.g. {"enable_thinking": false}.
+  extra_body: {}
+
+# -----------------------------------------------------------------------------
+# Workload sizes per benchmark.
+# -----------------------------------------------------------------------------
 benchmarks:
+  num_trials: 20
+  num_questions: 20
+  num_tasks: 10
+  max_tokens: 512
+  temperature: 0.0
   performance:
-    max_tokens: 500
-    num_trials: 10
+    num_trials: 20
+    max_tokens: 512
+    prompt_profile: heavy
   accuracy:
     num_questions: 20
-  code_generation:
-    num_tasks: 10
-  reasoning:
-    num_tasks: 10
+
+output:
+  format: text          # text | json | html
+  file: null            # set to write a report file
+  verbose: false        # true enables DEBUG logging
+

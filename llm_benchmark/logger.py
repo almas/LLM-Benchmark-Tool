@@ -10,12 +10,18 @@ def setup_logger(verbose: bool = False) -> logging.Logger:
         verbose: If True, set log level to DEBUG. Otherwise, set to INFO.
     """
     logger = logging.getLogger("llm_benchmark")
-    
-    # Prevent double logging if setup is called multiple times
-    if logger.hasHandlers():
-        return logger
 
     level = logging.DEBUG if verbose else logging.INFO
+
+    # Prevent double logging if setup is called multiple times, but still honour
+    # the requested verbosity on re-configuration (this used to be swallowed by
+    # an early `return` whenever handlers already existed).
+    if logger.hasHandlers():
+        logger.setLevel(level)
+        for handler in logger.handlers:
+            handler.setLevel(level)
+        return logger
+
     logger.setLevel(level)
 
     # Console handler

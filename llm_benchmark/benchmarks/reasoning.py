@@ -1,5 +1,6 @@
 import json
 import os
+from pathlib import Path
 from typing import List
 from llm_benchmark.models import BenchmarkTask, BenchmarkType
 
@@ -7,7 +8,7 @@ class ReasoningBenchmark:
     """Reasoning benchmark - measures logical deduction and problem solving."""
 
     name = BenchmarkType.REASONING
-    DATA_FILE = "llm_benchmark/data/benchmarks/reasoning.json"
+    DATA_FILE = str(Path(__file__).resolve().parent.parent / "data" / "benchmarks" / "reasoning.json")
 
     @staticmethod
     def generate_tasks(num_tasks: int = 10) -> List[BenchmarkTask]:

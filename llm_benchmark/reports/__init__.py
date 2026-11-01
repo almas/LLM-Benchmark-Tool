@@ -51,6 +51,43 @@ class ReportGenerator:
 
         return json.dumps(report_data, indent=2, ensure_ascii=False)
 
+    # ---------------------------------------------------------------- helpers
+    @staticmethod
+    def _num(value: Optional[float], digits: int = 1) -> str:
+        return "n/a" if value is None else f"{value:.{digits}f}"
+
+    @classmethod
+    def _stats_line(
+        cls,
+        label: str,
+        stats: Dict[str, Optional[float]],
+        digits: int = 1,
+        unit: str = "",
+    ) -> str:
+        """One aligned line with mean / median / p95 / min / max of a metric."""
+
+        def show(value: Optional[float]) -> str:
+            return cls._num(value, digits) + (unit if value is not None else "")
+
+        return (
+            f"  {label:<22}{show(stats.get('mean'))}"
+            f" | median {show(stats.get('median'))}"
+            f" | p95 {show(stats.get('p95'))}"
+            f" | min {show(stats.get('min'))}"
+            f" | max {show(stats.get('max'))}"
+        )
+
+    @staticmethod
+    def _token_sources(result: BenchmarkResult) -> str:
+        """How output token counts were obtained (server usage vs estimate)."""
+        counts: Dict[str, int] = {}
+        for trial in result.successful_trials:
+            key = trial.token_source or "unknown"
+            counts[key] = counts.get(key, 0) + 1
+        if not counts:
+            return "n/a"
+        return ", ".join(f"{name} ({n})" for name, n in sorted(counts.items()))
+
     def _generate_text(self) -> str:
         """Generate plain text report."""
         lines = []
@@ -71,19 +108,45 @@ class ReportGenerator:
             lines.append(f"Provider: {result.provider.value}")
             lines.append("-" * 70)
 
-            # Summary statistics
-            lines.append(f"  Trials:              {len(result.trials)}")
+            # How the numbers were produced - always show this, otherwise a
+            # decode rate and an end-to-end rate look interchangeable.
+            run_config = getattr(result, "config", None) or {}
+            mode = "streaming" if result.streaming_measured else "non-streaming"
+            lines.append(
+                f"  Measurement:         {mode}, concurrency {run_config.get('concurrency', 'n/a')}, "
+                f"warm-up {run_config.get('warmup_requests', 'n/a')} request(s)"
+            )
+            lines.append(f"  Output token counts: {self._token_sources(result)}")
+
+            lines.append(
+                f"  Trials:              {len(result.trials)} "
+                f"({len(result.successful_trials)} usable, {len(result.failed_trials)} failed)"
+            )
 
             if result.duration is not None:
                 lines.append(f"  Total Duration:      {result.duration:.2f}s")
 
+            lines.append(self._stats_line("Decode tokens/sec:", result.decode_tps_stats))
+            lines.append(self._stats_line("End-to-end tok/sec:", result.e2e_tps_stats))
+            lines.append(self._stats_line("TTFT:", result.ttft_stats, digits=3, unit="s"))
+            lines.append(self._stats_line("Inter-token lat:", result.itl_stats, digits=4, unit="s"))
+
+            if result.aggregate_throughput is not None:
+                lines.append(f"  Aggregate output:    {result.aggregate_throughput:.1f} tok/s (wall clock)")
+
             if result.avg_response_time is not None:
                 lines.append(f"  Avg Response Time:   {result.avg_response_time:.3f}s")
 
-            if result.avg_tokens_per_second is not None:
-                lines.append(f"  Avg Tokens/Second:   {result.avg_tokens_per_second:.1f}")
+            lines.append(
+                f"  Total Tokens:        {result.total_tokens} "
+                f"(in {result.total_input_tokens} / out {result.total_output_tokens})"
+            )
 
-            lines.append(f"  Total Tokens:        {result.total_tokens}")
+            if not result.streaming_measured:
+                lines.append(
+                    "  Note: no decode-phase timing - tokens/s includes prefill, "
+                    "queueing and network (enable streaming to separate them)."
+                )
 
             # Accuracy score if available (only for applicable benchmark types)
             accuracy = result.applicable_accuracy
@@ -103,8 +166,17 @@ class ReportGenerator:
             # Individual trial details (abbreviated)
             for trial in result.trials[:5]:  # Show first 5 trials
                 status = "ERROR" if trial.error else "OK"
-                lines.append(f"  [{status}] {trial.task_id}: {trial.response_time:.2f}s, "
-                           f"{trial.output_tokens or 0} tokens")
+                response_time = f"{trial.response_time:.2f}s" if trial.response_time is not None else "n/a"
+                ttft = f"{trial.ttft:.3f}s" if trial.ttft is not None else "n/a"
+                decode = (
+                    f"{trial.decode_tokens_per_second:.1f} tok/s"
+                    if trial.decode_tokens_per_second is not None
+                    else "n/a"
+                )
+                lines.append(
+                    f"  [{status}] {trial.task_id}: {response_time}, {trial.output_tokens or 0} tokens, "
+                    f"TTFT {ttft}, decode {decode}"
+                )
                 if trial.error:
                     lines.append(f"         Error: {trial.error}")
 
@@ -122,9 +194,27 @@ class ReportGenerator:
         if avg_times:
             lines.append(f"  Average Response Time (all benchmarks): {sum(avg_times) / len(avg_times):.3f}s")
 
-        avg_tps = [r.avg_tokens_per_second for r in self.results if r.avg_tokens_per_second is not None]
-        if avg_tps:
-            lines.append(f"  Average Tokens/Second (all benchmarks): {sum(avg_tps) / len(avg_tps):.1f}")
+        decode_rates = [
+            r.avg_decode_tokens_per_second
+            for r in self.results
+            if r.avg_decode_tokens_per_second is not None
+        ]
+        if decode_rates:
+            lines.append(
+                f"  Decode tokens/sec (all benchmarks):         "
+                f"{sum(decode_rates) / len(decode_rates):.1f}"
+            )
+
+        e2e_rates = [
+            r.avg_e2e_tokens_per_second
+            for r in self.results
+            if r.avg_e2e_tokens_per_second is not None
+        ]
+        if e2e_rates:
+            lines.append(
+                f"  End-to-end tokens/sec (all benchmarks):     "
+                f"{sum(e2e_rates) / len(e2e_rates):.1f}"
+            )
 
         total_trials = sum(len(r.trials) for r in self.results)
         lines.append(f"  Total Trials: {total_trials}")
@@ -144,7 +234,15 @@ class ReportGenerator:
 
         for result in self.results:
             avg_time = result.avg_response_time or 0
-            tps = result.avg_tokens_per_second or 0
+            decode_stats = result.decode_tps_stats
+            tps = decode_stats["median"] or result.avg_tokens_per_second or 0
+            ttft_median = result.ttft_stats["median"]
+            e2e_median = result.e2e_tps_stats["median"]
+            aggregate = result.aggregate_throughput
+            meas = result.config or {}
+            mode = "streaming" if result.streaming_measured else "non-streaming"
+            concurrency = meas.get("concurrency", 1)
+            token_source = meas.get("token_source") or "unknown"
             
             # Only show accuracy for applicable benchmark types
             accuracy = result.applicable_accuracy if hasattr(result, 'applicable_accuracy') else None
@@ -183,9 +281,13 @@ class ReportGenerator:
                 <td><strong>{result.benchmark_type.value.upper() if hasattr(result, 'benchmark_type') else result.value.upper()}</strong></td>
                 <td>{result.model_name}</td>
                 <td>{result.provider.value}</td>
-                <td>{len(result.trials)}</td>
+                <td>{len(result.successful_trials)}/{len(result.trials)}</td>
                 <td>{avg_time:.3f}s</td>
                 <td>{tps:.1f}</td>
+                <td>{self._num(e2e_median, 1)}</td>
+                <td>{self._num(aggregate, 1)}</td>
+                <td>{mode} / conc {concurrency} / tokens {token_source}</td>
+                <td>{self._num(ttft_median, 3) + ('s' if ttft_median is not None else '')}</td>
                 <td>{result.total_tokens}</td>
             </tr>
             {acc_html}
@@ -310,7 +412,11 @@ class ReportGenerator:
 
         # Key metric cards
         avg_times = [r.avg_response_time for r in self.results if r.avg_response_time is not None]
-        avg_tps = [r.avg_tokens_per_second for r in self.results if r.avg_tokens_per_second is not None]
+        avg_tps = [
+            r.avg_decode_tokens_per_second or r.avg_tokens_per_second
+            for r in self.results
+            if (r.avg_decode_tokens_per_second or r.avg_tokens_per_second) is not None
+        ]
         total_trials = sum(len(r.trials) for r in self.results)
 
         if avg_times:
@@ -325,7 +431,7 @@ class ReportGenerator:
             overall_tps = sum(avg_tps) / len(avg_tps)
             html += f'''        <div class="metric-card">
             <div class="metric-value">{overall_tps:.1f}</div>
-            <div class="metric-label">Avg Tokens/Second</div>
+            <div class="metric-label">Decode tokens/sec</div>
         </div>
 '''
 
@@ -342,9 +448,13 @@ class ReportGenerator:
                 <th>Benchmark</th>
                 <th>Model</th>
                 <th>Provider</th>
-                <th>Trials</th>
+                <th>Trials (usable)</th>
                 <th>Avg Response</th>
-                <th>Tokens/Sec</th>
+                <th>Decode tok/s</th>
+                <th>E2E tok/s</th>
+                <th>Aggregate tok/s</th>
+                <th>Measurement</th>
+                <th>TTFT median</th>
                 <th>Total Tokens</th>
             </tr>
         </thead>
@@ -365,10 +475,17 @@ class ReportGenerator:
                 error_class = "error" if trial.error else ""
                 badge_class = "badge-danger" if trial.error else "badge-success"
                 badge_text = "ERROR" if trial.error else "OK"
+                response_time = f"{trial.response_time:.2f}s" if trial.response_time is not None else "n/a"
+                decode_rate = (
+                    f"{trial.decode_tokens_per_second:.1f} tok/s"
+                    if trial.decode_tokens_per_second is not None
+                    else "n/a"
+                )
+                ttft = f"{trial.ttft:.3f}s" if trial.ttft is not None else "n/a"
                 html += f'''        <div class="trial-item {error_class}">
             <span class="badge {badge_class}">{badge_text}</span>
             <strong>{trial.task_id}</strong>
-            - {trial.response_time:.2f}s, {trial.output_tokens or 0} tokens
+            - {response_time}, {trial.output_tokens or 0} tokens, TTFT {ttft}, decode {decode_rate}
             {'<br><small style="color:#e74c3c">Error: ' + trial.error + '</small>' if trial.error else ''}
         </div>
 '''
