@@ -75,3 +75,4 @@ Thumbs.db
 # Project specific
 *.log
 llm_benchmark/reports/
+llm_benchmark/config.yaml
