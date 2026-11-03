@@ -1,12 +1,15 @@
 """CLI interface for the LLM Benchmark Tool.
 
-Effective settings are merged from four sources, highest precedence first:
+Effective settings are merged from several sources, highest precedence first:
 
     1. command line flags
-    2. environment variables (``LLM_BENCH_*``, ``OPENAI_API_KEY``, ...)
+    2. this tool's environment variables (``LLM_BENCH_*``)
     3. ``config.yaml`` (``--config``, ``$LLM_BENCH_CONFIG``, ``./config.yaml``,
        ``llm_benchmark/config.yaml``, ``~/.config/llm-benchmark/config.yaml``)
-    4. built-in defaults
+    4. generic SDK variables (``OPENAI_API_KEY``, ``OPENAI_BASE_URL``,
+       ``OPENAI_API_BASE``, ``AZURE_OPENAI_*``), used only when ``config.yaml``
+       does not carry the setting
+    5. built-in defaults
 """
 
 import argparse
@@ -37,11 +40,14 @@ def parse_args(args=None):
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Configuration:
-  Settings are read from config.yaml, then overridden by environment variables
-  and finally by the flags below. Copy llm_benchmark/config.yaml.template to
-  llm_benchmark/config.yaml (or ./config.yaml) and edit it. Inside the file,
-  ${VAR} and ${VAR:default} are expanded from the environment, so API keys can
-  stay out of the file.
+  Settings are read from config.yaml, then overridden by LLM_BENCH_* variables
+  and finally by the flags below. Generic SDK variables (OPENAI_API_KEY,
+  OPENAI_BASE_URL, OPENAI_API_BASE, AZURE_OPENAI_*) are only used when
+  config.yaml omits that setting, so an ambient OPENAI_API_BASE cannot redirect
+  the run away from the endpoint in your config file. Copy
+  llm_benchmark/config.yaml.template to llm_benchmark/config.yaml (or
+  ./config.yaml) and edit it. Inside the file, ${VAR} and ${VAR:default} are
+  expanded from the environment, so API keys can stay out of the file.
 
 Examples:
   # Run everything against a local vLLM/SGLang server using config.yaml

@@ -1,12 +1,16 @@
 """Configuration loading for the LLM Benchmark Tool.
 
-The tool is configured from three sources, merged with a strict precedence
+The tool is configured from several sources, merged with a strict precedence
 order (highest wins):
 
     1. command line flags
-    2. environment variables  (LLM_BENCH_*, OPENAI_API_KEY, ...)
-    3. the YAML config file   (config.yaml)
-    4. built-in defaults
+    2. this tool's environment variables   (LLM_BENCH_*)
+    3. the YAML config file                (config.yaml)
+    4. generic SDK variables               (OPENAI_API_KEY, OPENAI_BASE_URL,
+       OPENAI_API_BASE, AZURE_OPENAI_*) - consulted only when the config file
+       does not carry the setting, so an ambient OPENAI_API_BASE cannot
+       silently redirect a benchmark away from config.yaml
+    5. built-in defaults
 
 The config file is searched for in this order:
 
@@ -70,6 +74,12 @@ def redact(secret: Optional[str]) -> str:
     if len(secret) <= 10:
         return f"{secret[:2]}***"
     return f"{secret[:6]}...{secret[-4:]} ({len(secret)} chars)"
+
+
+def _is_secret(name: Any) -> bool:
+    """True when a config key or environment variable name holds a secret."""
+    lowered = str(name).lower()
+    return any(marker in lowered for marker in SECRET_KEYS)
 
 
 def expand_env(value: Any) -> Any:
@@ -214,10 +224,21 @@ def resolve(
     yaml_keys: Iterable[str],
     env_names: Iterable[str] = (),
     caster: Any = None,
+    fallback_env_names: Iterable[str] = (),
 ) -> Resolved:
-    """Resolve one setting using CLI > env > YAML > default precedence."""
+    """Resolve one setting using CLI > LLM_BENCH_* env > YAML > SDK env > default.
+
+    ``env_names`` are this tool's own overrides (``LLM_BENCH_*``) and outrank
+    the config file. ``fallback_env_names`` are the generic SDK variables
+    (``OPENAI_API_KEY``, ``OPENAI_BASE_URL``, ``OPENAI_API_BASE``, ...) that
+    get exported for unrelated programs all the time; they are only consulted
+    when the config file does not carry the setting, so an ambient
+    ``OPENAI_API_BASE`` can no longer shadow ``provider.base_url`` from
+    config.yaml.
+    """
     if cli_value is not None and cli_value != "":
         value = caster(cli_value) if caster else cli_value
+        _note_shadowed_env(fallback_env_names, value, "the --flag")
         return Resolved(value, "cli")
 
     for name in env_names:
@@ -225,6 +246,7 @@ def resolve(
         if raw is not None:
             value = _cast(raw, caster) if caster else raw
             if value is not None:
+                _note_shadowed_env(fallback_env_names, value, f"env:{name}")
                 return Resolved(value, f"env:{name}")
 
     for path in yaml_keys:
@@ -232,9 +254,33 @@ def resolve(
         if raw is not None and raw != "":
             value = _cast(raw, caster) if caster else raw
             if value is not None:
+                _note_shadowed_env(fallback_env_names, value, f"config.yaml:{path}")
                 return Resolved(value, f"config.yaml:{path}")
 
+    for name in fallback_env_names:
+        raw = _env(name)
+        if raw is not None:
+            value = _cast(raw, caster) if caster else raw
+            if value is not None:
+                return Resolved(value, f"env:{name}")
+
     return Resolved(DEFAULTS.get(key), "default")
+
+
+def _note_shadowed_env(env_names: Iterable[str], value: Any, winner: str) -> None:
+    """Log generic env vars that the winning source just overrode.
+
+    Secret-bearing variables (``OPENAI_API_KEY``, ...) are redacted - the debug
+    log must never contain a key, even when the key is not the one being used.
+    """
+    for name in env_names:
+        raw = _env(name)
+        if raw is None or str(value).strip() == raw:
+            continue
+        shown = redact(raw) if _is_secret(name) else repr(raw)
+        logger.debug(
+            "%s overrides environment variable %s=%s for this run.", winner, name, shown
+        )
 
 
 
@@ -253,7 +299,8 @@ def resolve_provider(config: Dict[str, Any], cli: Dict[str, Any]) -> Dict[str, A
         cli.get("api_key"),
         config,
         ("provider.api_key", "api_key"),
-        (f"{ENV_PREFIX}API_KEY", "OPENAI_API_KEY", "AZURE_OPENAI_API_KEY"),
+        (f"{ENV_PREFIX}API_KEY",),
+        fallback_env_names=("OPENAI_API_KEY", "AZURE_OPENAI_API_KEY"),
     )
 
     provider_cfg: Dict[str, Any] = {"name": name}
@@ -273,7 +320,8 @@ def resolve_provider(config: Dict[str, Any], cli: Dict[str, Any]) -> Dict[str, A
         cli.get("base_url"),
         config,
         ("provider.base_url", "base_url"),
-        (f"{ENV_PREFIX}BASE_URL", "OPENAI_BASE_URL", "OPENAI_API_BASE"),
+        (f"{ENV_PREFIX}BASE_URL",),
+        fallback_env_names=("OPENAI_BASE_URL", "OPENAI_API_BASE"),
     )
     if base_url.value:
         provider_cfg["base_url"] = base_url.value
@@ -283,7 +331,8 @@ def resolve_provider(config: Dict[str, Any], cli: Dict[str, Any]) -> Dict[str, A
         cli.get("azure_endpoint"),
         config,
         ("provider.azure_endpoint", "azure_endpoint"),
-        (f"{ENV_PREFIX}AZURE_ENDPOINT", "AZURE_OPENAI_ENDPOINT"),
+        (f"{ENV_PREFIX}AZURE_ENDPOINT",),
+        fallback_env_names=("AZURE_OPENAI_ENDPOINT",),
     )
     if azure_endpoint.value:
         provider_cfg["azure_endpoint"] = azure_endpoint.value
@@ -293,7 +342,8 @@ def resolve_provider(config: Dict[str, Any], cli: Dict[str, Any]) -> Dict[str, A
         cli.get("api_version"),
         config,
         ("provider.api_version", "api_version"),
-        (f"{ENV_PREFIX}API_VERSION", "AZURE_OPENAI_API_VERSION"),
+        (f"{ENV_PREFIX}API_VERSION",),
+        fallback_env_names=("AZURE_OPENAI_API_VERSION",),
     )
     if api_version.value:
         provider_cfg["api_version"] = api_version.value
@@ -351,12 +401,22 @@ def _validate_provider(provider_cfg: Dict[str, Any]) -> None:
 
 
 def summarise(provider_cfg: Dict[str, Any], settings: Dict[str, Any]) -> str:
-    """Human readable summary of the effective configuration."""
+    """Human readable summary of the effective configuration.
+
+    Every provider setting is printed together with the source it came from:
+    "which of my config sources won" is the first question when a run talks to
+    the wrong server.
+    """
+    provenance = provider_cfg.get("_provenance") or {}
     lines = [
-        f"  provider      : {provider_cfg.get('name')}",
-        f"  base_url      : {provider_cfg.get('base_url') or '<default>'}",
-        f"  model         : {provider_cfg.get('model') or '<engine default>'}",
-        f"  api_key       : {redact(provider_cfg.get('api_key'))}",
+        f"  provider      : {provider_cfg.get('name')}"
+        f"  (from {provenance.get('name', 'unknown')})",
+        f"  base_url      : {provider_cfg.get('base_url') or '<default>'}"
+        f"  (from {provenance.get('base_url', 'unknown')})",
+        f"  model         : {provider_cfg.get('model') or '<engine default>'}"
+        f"  (from {provenance.get('model', 'unknown')})",
+        f"  api_key       : {redact(provider_cfg.get('api_key'))}"
+        f"  (from {provenance.get('api_key', 'unset')})",
         f"  timeout       : {provider_cfg.get('timeout')}s",
         f"  concurrency   : {settings.get('concurrency')}",
         f"  warmup        : {settings.get('warmup_requests')} request(s)",
@@ -422,6 +482,15 @@ EXPLICIT_MAX_TOKENS_SOURCES = (
     "env:LLM_BENCH_MAX_TOKENS",
 )
 
+# Sources that mean "the user asked for this right now" (a flag or one of this
+# tool's own LLM_BENCH_* variables). They outrank the per-benchmark sections of
+# config.yaml, which are a standing preference rather than a per-run override.
+CLI_OVERRIDE_SOURCES = ("cli",) + tuple(
+    f"env:{env_name}"
+    for _, _, _, _env_names, _ in MEASUREMENT_SPEC
+    for env_name in _env_names
+)
+
 
 def resolve_measurement(config: Dict[str, Any], cli: Dict[str, Any]) -> Dict[str, Any]:
     """Resolve measurement/execution settings using the documented precedence."""
@@ -455,8 +524,19 @@ def resolve_measurement(config: Dict[str, Any], cli: Dict[str, Any]) -> Dict[str
         ("code_generation", "num_tasks"),
         ("multilingual", "num_tasks"),
     ):
-        if settings.get(f"_{count_key}_source") in ("cli",) and settings.get(count_key):
+        if (
+            settings.get(f"_{count_key}_source") in CLI_OVERRIDE_SOURCES
+            and settings.get(count_key)
+        ):
             per_benchmark.setdefault(bench_name, {})[count_key] = settings[count_key]
+
+    # The same rule applies to max_tokens: `--max-tokens 64` must beat
+    # benchmarks.performance.max_tokens, or the flag is silently ignored while
+    # the summary still prints the number the user typed.
+    if settings.get("_max_tokens_source") in CLI_OVERRIDE_SOURCES:
+        for values in per_benchmark.values():
+            if "max_tokens" in values:
+                values["max_tokens"] = settings["max_tokens"]
 
     settings["per_benchmark"] = per_benchmark
 

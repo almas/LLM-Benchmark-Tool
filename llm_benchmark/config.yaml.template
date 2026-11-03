@@ -8,7 +8,10 @@
 # ${VAR} and ${VAR:default} inside string values are expanded from the
 # environment, so secrets can stay out of the file.
 #
-# Precedence: CLI flags > environment variables > this file > built-in defaults.
+# Precedence: CLI flags > LLM_BENCH_* variables > this file > generic SDK variables
+# (OPENAI_API_KEY, OPENAI_BASE_URL, OPENAI_API_BASE, AZURE_OPENAI_*) > built-in defaults.
+# The generic SDK variables are consulted only when this file omits that setting, so an ambient
+# OPENAI_API_BASE exported for another program cannot override the base_url below.
 # The effective settings (API key redacted) are printed before the first request.
 # -----------------------------------------------------------------------------
 

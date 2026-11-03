@@ -63,11 +63,17 @@ python main.py --provider local --model test-model --base-url http://127.0.0.1:8
 
 ## Configuration
 
-Settings are merged from four sources, highest precedence first:
+Settings are merged from these levels, highest precedence first:
 
 ```
-CLI flags  >  environment variables (LLM_BENCH_*, OPENAI_API_KEY, ...)  >  config.yaml  >  defaults
+CLI flags  >  LLM_BENCH_*  >  config.yaml  >  generic SDK env vars  >  defaults
+                               (OPENAI_API_KEY, OPENAI_BASE_URL, OPENAI_API_BASE, AZURE_OPENAI_*)
 ```
+
+Generic SDK variables are only consulted when `config.yaml` does not carry that setting, so an
+`OPENAI_API_BASE` exported for some other program can no longer silently move a benchmark to a
+different endpoint. The summary printed before the first request shows where every provider
+setting came from, e.g. `base_url : http://127.0.0.1:8001/v1  (from config.yaml:provider.base_url)`.
 
 `config.yaml` is searched in this order: `--config`, `$LLM_BENCH_CONFIG`, `./config.yaml`,
 `./config.yml`, `llm_benchmark/config.yaml`, `~/.config/llm-benchmark/config.yaml`.
